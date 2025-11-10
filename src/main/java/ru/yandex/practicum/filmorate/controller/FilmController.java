@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.ConditionsNotMetException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.time.LocalDate;
@@ -91,7 +91,7 @@ public class FilmController {
             return oldFilm;
         }
         log.warn("Фильм с ID {} не найден для обновления", newFilm.getId());
-        throw new NotFoundException(String.format("Фильм с названием %s" + newFilm.getId() + " не найден", newFilm.getName()));
+        throw new ValidationException(String.format("Фильм с названием %s" + newFilm.getId() + " не найден", newFilm.getName()));
     }
 
     private static void validateId(Film film) {
@@ -102,7 +102,7 @@ public class FilmController {
     }
 
     private static void checkNameIsExist(Film film) {
-        if (film.getName() == null || film.getDescription().isBlank()) {
+        if (film.getName() == null || film.getName().isBlank()) {
             log.warn("Попытка создания фильма с пустым названием");
             throw new ConditionsNotMetException("Название не может быть пустым");
         }
