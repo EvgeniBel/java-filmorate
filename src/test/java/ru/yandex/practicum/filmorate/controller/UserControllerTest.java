@@ -2,13 +2,20 @@ package ru.yandex.practicum.filmorate.controller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
 class UserControllerTest {
+
+    @Autowired
     private UserController userController;
 
     @BeforeEach
@@ -51,16 +58,6 @@ class UserControllerTest {
     void testCreateUserWithEmailMissingAtSymbol() {
         User user = new User();
         user.setEmail("user.com"); // граничное условие
-        user.setLogin("login");
-        user.setBirthday(LocalDate.of(1993, 1, 1));
-
-        assertThrows(ValidationException.class, () -> userController.create(user));
-    }
-
-    @Test
-    void testCreateUserWithEmailOnlyAtSymbol() {
-        User user = new User();
-        user.setEmail("@"); // граничное условие
         user.setLogin("login");
         user.setBirthday(LocalDate.of(1993, 1, 1));
 

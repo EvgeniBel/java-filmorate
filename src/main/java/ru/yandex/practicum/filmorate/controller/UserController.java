@@ -1,9 +1,10 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.ConditionsNotMetException;
 import ru.yandex.practicum.filmorate.exception.DuplicatedDataException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
+@Validated
 public class UserController {
 
     private final static Logger log = LoggerFactory.getLogger(UserController.class);
@@ -27,17 +29,16 @@ public class UserController {
     }
 
     @PostMapping
-    public User create(@RequestBody User user) {
+    public User create(@Valid @RequestBody User user) {
         log.info("POST /users - создание нового пользователя: {}", user);
         // проверяем выполнение необходимых условий
+        checkNameExist(user);
         validateEmail(user.getEmail());
         checkEmailDuplicate(user.getEmail());
         validateLogin(user.getLogin());
         validateBirthday(user.getBirthday());
-
         // формируем дополнительные данные
         user.setId(getNextId());
-        checkNameExist(user);
         users.put(user.getId(), user);
         log.info("Пользователь успешно создан: ID={}, Email={}, Login={}", user.getId(), user.getEmail(), user.getLogin());
         return user;
@@ -47,7 +48,10 @@ public class UserController {
     public User update(@RequestBody User newUser) {
         log.info("PUT /users - обновление пользователя: {}", newUser);
         // проверяем необходимые условия
+        validateEmail(newUser.getEmail());
         validateId(newUser.getId());
+        validateEmail(newUser.getEmail());
+        validateBirthday(newUser.getBirthday());
 
         if (!users.containsKey(newUser.getId())) {
             log.warn("Пользователь с ID={} не найден при попытке обновления", newUser.getId());
@@ -57,10 +61,11 @@ public class UserController {
         User oldUser = users.get(newUser.getId());
         log.debug("Найден пользователь для обновления: {}", oldUser);
 
+        if (newUser.getEmail() != null && !newUser.getEmail().equals(oldUser.getEmail())) {
+            checkEmailDuplicate(newUser.getEmail());
+        }
         boolean updated = false;
         if (newUser.getEmail() != null && !newUser.getEmail().equals(oldUser.getEmail())) {
-            validateEmail(newUser.getEmail());
-            checkEmailDuplicate(newUser.getEmail());
             log.debug("Обновление email: {} -> {}", oldUser.getEmail(), newUser.getEmail());
             oldUser.setEmail(newUser.getEmail());
             updated = true;
@@ -70,14 +75,12 @@ public class UserController {
             oldUser.setName(newUser.getName());
             updated = true;
         }
-        if (newUser.getLogin() != null) {
-            validateLogin(newUser.getLogin());
+        if (newUser.getLogin() != null && !newUser.getLogin().equals(oldUser.getLogin())) {
             log.debug("Обновление login: {} -> {}", oldUser.getLogin(), newUser.getLogin());
             oldUser.setLogin(newUser.getLogin());
             updated = true;
         }
-        if (newUser.getBirthday() != null) {
-            validateBirthday(newUser.getBirthday());
+        if (newUser.getBirthday() != null && !newUser.getBirthday().equals(oldUser.getBirthday())) {
             log.debug("Обновление birthday: {} -> {}", oldUser.getBirthday(), newUser.getBirthday());
             oldUser.setBirthday(newUser.getBirthday());
             updated = true;
@@ -93,7 +96,7 @@ public class UserController {
     private void validateId(Long id) {
         log.error("Попытка операции с null ID");
         if (id == null) {
-            throw new ConditionsNotMetException("Id должен быть указан");
+            throw new ValidationException("Id должен быть указан");
         }
         log.debug("Валидация ID: {} - OK", id);
     }
@@ -119,7 +122,7 @@ public class UserController {
 
     private void validateEmail(String email) {
         if (email == null || email.isBlank()) {
-            throw new ConditionsNotMetException("Имейл должен быть указан");
+            throw new ValidationException("Имейл должен быть указан");
         }
         if (!email.contains("@")) {
             log.error("Валидация email: {} не содержит символ @", email);
