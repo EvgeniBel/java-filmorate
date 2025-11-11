@@ -18,7 +18,7 @@ import java.util.Map;
 @Validated
 public class FilmController {
 
-    private final static Logger log = LoggerFactory.getLogger(FilmController.class);
+    private static final  Logger log = LoggerFactory.getLogger(FilmController.class);
     private final Map<Long, Film> films = new HashMap<>();
     private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
 
@@ -126,12 +126,14 @@ public class FilmController {
             throw new ValidationException("Название не может быть пустым");
         }
     }
+
     private static void checkDurations(int duration) {
         if (duration <= 0) {
             log.warn("Попытка создания фильма c отрицательным значением продолжительности");
             throw new ValidationException("Продолжительность фильма должна быть положительным числом.");
         }
     }
+
     private static void checkDescriptionLength(String description) {
         if (description != null && description.length() > 200) {
             log.warn("Попытка создания фильма с превышением длины описания. Текущая длина равна {}",
@@ -139,6 +141,7 @@ public class FilmController {
             throw new ValidationException("Максимальная длина описания — 200 символов");
         }
     }
+
     // вспомогательный метод для генерации идентификатора нового поста
     private long getNextId() {
         long currentMaxId = films.keySet()
@@ -149,4 +152,3 @@ public class FilmController {
         return ++currentMaxId;
     }
 }
-
