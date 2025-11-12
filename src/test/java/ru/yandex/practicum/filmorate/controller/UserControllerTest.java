@@ -115,7 +115,7 @@ class UserControllerTest {
     }
 
     @Test
-    void testCreateUserWithLoginContainingMultipleSpaces() {
+    void testCreateUserLoginWithSpaces() {
         User user = new User();
         user.setEmail("test@mail.com");
         user.setLogin("l o g i n"); // граничное условие
@@ -157,7 +157,7 @@ class UserControllerTest {
     }
 
     @Test
-    void createUser_WithFarFutureBirthday_ShouldThrowException() {
+    void createUserWithFarFutureBirthday() {
         User user = new User();
         user.setEmail("test@mail.com");
         user.setLogin("testlogin");

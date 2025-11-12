@@ -55,7 +55,7 @@ public class UserController {
 
         if (!users.containsKey(newUser.getId())) {
             log.warn("Пользователь с ID={} не найден при попытке обновления", newUser.getId());
-            throw new ValidationException("User с id = " + newUser.getId() + " не найден");
+            throw new ValidationException(String.format("User с id = %d не найден",newUser.getId()));
         }
 
         User oldUser = users.get(newUser.getId());
