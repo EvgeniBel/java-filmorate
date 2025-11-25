@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
@@ -27,7 +28,7 @@ public class FilmService {
 
     public Film findById(Long id) {
         return filmStorage.findById(id)
-                .orElseThrow(() -> new NoSuchElementException(String.format("Фильм с id - %d не найден",id));
+                .orElseThrow(() -> new NotFoundException(String.format("Фильм с id - %d не найден",id));
     }
 
     public Film create(Film film) {

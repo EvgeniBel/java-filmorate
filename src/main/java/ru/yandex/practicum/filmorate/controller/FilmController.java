@@ -20,14 +20,17 @@ import java.util.Map;
 public class FilmController {
     private final FilmService filmService;
 
-
-    private final Map<Long, Film> films = new HashMap<>();
-    private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
+    public FilmController(FilmService filmService) {
+        this.filmService = filmService;
+    }
 
     @GetMapping
     public Collection<Film> findAll() {
-        log.info("GET /films - получение всех фильмов. Количество фильмов - {}", films.size());
-        return films.values();
+        return filmService.findAll();
+    }
+    @GetMapping("/{id}")
+    public Film findById(@PathVariable Long id) {
+        return filmService.findById(id);
     }
 
     @PostMapping
@@ -37,12 +40,18 @@ public class FilmController {
 
     @PutMapping
     public Film update(@RequestBody Film newFilm) {
+        return  filmService.update(newFilm);
     }
-
-
-
+    @PutMapping("/{id}/like/{userId}")
+    public void addLike(@PathVariable Long id, @PathVariable Long userId) {
+        filmService.addLike(id,userId);
     }
-
-    // вспомогательный метод для генерации идентификатора нового поста
-
+    @DeleteMapping ("/{id}/like/{userId}")
+    public void removeLike(@PathVariable Long id, @PathVariable Long userId) {
+        filmService.removeLike(id,userId);
+    }
+    @PutMapping("/popular")
+    public void getPopularFilms(@RequestParam(defaultValue = "10") int count) {
+        filmService.getPopularFilms(count);
+    }
 }
