@@ -9,7 +9,6 @@ import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 public class FilmService {
@@ -28,7 +27,7 @@ public class FilmService {
 
     public Film findById(Long id) {
         return filmStorage.findById(id)
-                .orElseThrow(() -> new NotFoundException(String.format("Фильм с id - %d не найден",id));
+                .orElseThrow(() -> new NotFoundException(String.format("Фильм с id - %d не найден", id)));
     }
 
     public Film create(Film film) {
@@ -66,7 +65,6 @@ public class FilmService {
         if (film.getReleaseDate() == null) {
             throw new ValidationException("Дата релиза должна быть указана");
         }
-        // ПРОВЕРКА: дата не раньше 28 декабря 1895 года
         if (film.getReleaseDate().isBefore(minReleaseDate)) {
             throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
         }

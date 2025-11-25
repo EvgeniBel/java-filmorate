@@ -5,30 +5,32 @@ import ru.yandex.practicum.filmorate.model.User;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class InMemoryUserStorage implements UserStorage{
+public class InMemoryUserStorage implements UserStorage {
 
     private final Map<Long, User> users = new HashMap<>();
     private final Map<Long, Set<Long>> friends = new HashMap<>();
     private long nextId = 1;
 
     @Override
-    public List<User> findAll(){
+    public List<User> findAll() {
         return new ArrayList<>(users.values());
     }
+
     @Override
-    public Optional<User> findById(Long id){
+    public Optional<User> findById(Long id) {
         return Optional.ofNullable(users.get(id));
     }
+
     @Override
-    public User create(User user){
+    public User create(User user) {
         user.setId(nextId++);
-        users.put(user.getId(),user);
+        users.put(user.getId(), user);
         friends.put(user.getId(), new HashSet<>());
         return user;
     }
 
     @Override
-    public User update(User user){
+    public User update(User user) {
         if (!users.containsKey(user.getId())) {
             throw new NoSuchElementException("Пользователь с id=" + user.getId() + " не найден");
         }
@@ -37,23 +39,23 @@ public class InMemoryUserStorage implements UserStorage{
     }
 
     @Override
-    public void delete(Long id){
+    public void delete(Long id) {
         users.remove(id);
         friends.remove(id);
         friends.values().forEach(friendSet -> friendSet.remove(id));
     }
 
     @Override
-    public void addFriend(Long userId, Long friendId){
-    validateUserExists(userId);
-    validateUserExists(friendId);
+    public void addFriend(Long userId, Long friendId) {
+        validateUserExists(userId);
+        validateUserExists(friendId);
 
-    friends.get(userId).add(friendId);
-    friends.get(friendId).add(userId);
+        friends.get(userId).add(friendId);
+        friends.get(friendId).add(userId);
     }
 
     @Override
-    public void removeFriend(Long userId, Long friendId){
+    public void removeFriend(Long userId, Long friendId) {
         validateUserExists(userId);
         validateUserExists(friendId);
 
@@ -62,16 +64,16 @@ public class InMemoryUserStorage implements UserStorage{
     }
 
     @Override
-    public List<User> getFriends(Long userId){
+    public List<User> getFriends(Long userId) {
         validateUserExists(userId);
         return friends.get(userId).stream()
-                .map(users :: get)
+                .map(users::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-}
+    }
 
     @Override
-    public List<User> getCommonFriends(Long userId, Long otherId){
+    public List<User> getCommonFriends(Long userId, Long otherId) {
         validateUserExists(userId);
         validateUserExists(otherId);
 
@@ -83,7 +85,7 @@ public class InMemoryUserStorage implements UserStorage{
                 .map(users::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-}
+    }
 
     private void validateUserExists(Long userId) {
         if (!users.containsKey(userId)) {
