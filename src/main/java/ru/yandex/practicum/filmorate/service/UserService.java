@@ -89,6 +89,6 @@ public class UserService {
 
     private User findUserOrThrow(Long userId) {
         return userStorage.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
+                .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден", userId)));
     }
 }

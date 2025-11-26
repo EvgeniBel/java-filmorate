@@ -89,11 +89,11 @@ public class FilmService {
 
     private Film findFilmOrThrow(Long filmId) {
         return filmStorage.findById(filmId)
-                .orElseThrow(() -> new NotFoundException("Фильм с id=" + filmId + " не найден"));
+                .orElseThrow(() -> new NotFoundException(String.format("Фильм с id = %d не найден", filmId)));
     }
 
     private User findUserOrThrow(Long userId) {
         return userStorage.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
+                .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден", userId)));
     }
 }
