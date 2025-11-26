@@ -23,7 +23,7 @@ public class UserController {
         return userService.findAll();
     }
 
-    @GetMapping("/{id}/")
+    @GetMapping("/{id}")
     public User findById(@PathVariable Long id) {
         return userService.findById(id);
     }
@@ -57,7 +57,4 @@ public class UserController {
     public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
         userService.removeFriend(id, friendId);
     }
-
-    // GET /users/{id}/friends - возвращаем список пользователей, являющихся его друзьями.
-    //GET /users/{id}/friends/common/{otherId} — список друзей, общих с другим пользователем.
 }

@@ -24,44 +24,51 @@ public class UserService {
     }
 
     public User findById(Long id) {
-        return userStorage.findById(id)
-                .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id - %d не найден", id)));
+        return findUserOrThrow(id);
     }
 
     public User create(User user) {
+        validateUser(user);
+        checkNameExist(user);
         return userStorage.create(user);
     }
 
     public User update(User user) {
+        findUserOrThrow(user.getId());
         validateUser(user);
         checkNameExist(user);
         return userStorage.update(user);
     }
 
-    public void delete(Long id) {
-        userStorage.delete(id);
+    public void delete(Long userId) {
+        findUserOrThrow(userId);
+        userStorage.delete(userId);
     }
 
     public void addFriend(Long userId, Long friendId) {
+        findUserOrThrow(userId);
+        findUserOrThrow(friendId);
         userStorage.addFriend(userId, friendId);
     }
 
     public void removeFriend(Long userId, Long friendId) {
+        findUserOrThrow(userId);
+        findUserOrThrow(friendId);
         userStorage.removeFriend(userId, friendId);
     }
 
     public List<User> getFriends(Long userId) {
+        findUserOrThrow(userId);
         return userStorage.getFriends(userId);
     }
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
+        findUserOrThrow(userId);
+        findUserOrThrow(otherId);
         return userStorage.getCommonFriends(userId, otherId);
     }
 
     public void validateUser(User user) {
-        if (user.getId() == null) {
-            throw new ValidationException("Id должен быть указан");
-        }
 
         if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             throw new ValidationException("Электронная почта не может быть пустой и должна содержать символ @");
@@ -78,5 +85,10 @@ public class UserService {
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
+    }
+
+    private User findUserOrThrow(Long userId) {
+        return userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
     }
 }

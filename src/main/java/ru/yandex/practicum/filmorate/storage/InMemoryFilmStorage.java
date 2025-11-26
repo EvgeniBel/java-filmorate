@@ -1,10 +1,13 @@
 package ru.yandex.practicum.filmorate.storage;
 
+import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Component
 public class InMemoryFilmStorage implements FilmStorage {
 
     private final Map<Long, Film> films = new HashMap<>();
@@ -31,9 +34,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film update(Film film) {
-        if (!films.containsKey(film.getId())) {
-            throw new NoSuchElementException("Фильм с id=" + film.getId() + " не найден");
-        }
         films.put(film.getId(), film);
         return film;
     }
@@ -46,17 +46,11 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public void addLike(Long filmId, Long userId) {
-        if (!films.containsKey(filmId)) {
-            throw new NoSuchElementException("Фильм с id=" + filmId + " не найден");
-        }
         likes.get(filmId).add(userId);
     }
 
     @Override
     public void removeLike(Long filmId, Long userId) {
-        if (!films.containsKey(filmId)) {
-            throw new NoSuchElementException("Фильм с id=" + filmId + " не найден");
-        }
         likes.get(filmId).remove(userId);
     }
 
@@ -64,9 +58,9 @@ public class InMemoryFilmStorage implements FilmStorage {
     public List<Film> getPopularFilms(int count) {
         return films.values().stream()
                 .sorted((f1, f2) -> {
-                    int likes1 = likes.get(f1.getId()).size();
-                    int likes2 = likes.get(f2.getId()).size();
-                    return Integer.compare(likes2, likes1);
+                    int likes1 = likes.getOrDefault(f1.getId(), Collections.emptySet()).size();
+                    int likes2 = likes.getOrDefault(f2.getId(), Collections.emptySet()).size();
+                    return Integer.compare(likes2, likes1);  // Сортировка по убыванию лайков
                 })
                 .limit(count)
                 .collect(Collectors.toList());

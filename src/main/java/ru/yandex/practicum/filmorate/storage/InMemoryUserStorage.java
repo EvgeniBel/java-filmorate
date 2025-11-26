@@ -1,10 +1,12 @@
 package ru.yandex.practicum.filmorate.storage;
 
+import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Component
 public class InMemoryUserStorage implements UserStorage {
 
     private final Map<Long, User> users = new HashMap<>();
@@ -31,9 +33,6 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User update(User user) {
-        if (!users.containsKey(user.getId())) {
-            throw new NoSuchElementException("Пользователь с id=" + user.getId() + " не найден");
-        }
         users.put(user.getId(), user);
         return user;
     }
@@ -47,25 +46,18 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        validateUserExists(userId);
-        validateUserExists(friendId);
-
         friends.get(userId).add(friendId);
         friends.get(friendId).add(userId);
     }
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
-        validateUserExists(userId);
-        validateUserExists(friendId);
-
         friends.get(userId).remove(friendId);
         friends.get(friendId).remove(userId);
     }
 
     @Override
     public List<User> getFriends(Long userId) {
-        validateUserExists(userId);
         return friends.get(userId).stream()
                 .map(users::get)
                 .filter(Objects::nonNull)
@@ -74,9 +66,6 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        validateUserExists(userId);
-        validateUserExists(otherId);
-
         Set<Long> userFriends = friends.get(userId);
         Set<Long> otherFriends = friends.get(otherId);
 
@@ -85,11 +74,5 @@ public class InMemoryUserStorage implements UserStorage {
                 .map(users::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-    }
-
-    private void validateUserExists(Long userId) {
-        if (!users.containsKey(userId)) {
-            throw new NoSuchElementException("Пользователь с id=" + userId + " не найден");
-        }
     }
 }

@@ -5,6 +5,7 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.Collection;
+import java.util.List;
 
 @RestController
 @RequestMapping("/films")
@@ -46,8 +47,8 @@ public class FilmController {
         filmService.removeLike(id, userId);
     }
 
-    @PutMapping("/popular")
-    public void getPopularFilms(@RequestParam(defaultValue = "10") int count) {
-        filmService.getPopularFilms(count);
+    @GetMapping("/popular")
+    public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") int count) {
+        return  filmService.getPopularFilms(count);
     }
 }
