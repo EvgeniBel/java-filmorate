@@ -2,7 +2,7 @@
 Template repository for Filmorate project.
 
 
-![ Схема базы данных](<img width="791" height="815" alt="Схема базы данных" src="https://github.com/user-attachments/assets/01b3cbca-5d1d-43a9-a420-96953bbc6914" />
+![Схема базы данных](https://github.com/user-attachments/assets/e51d51df-58f8-41f5-815e-c13b25cb3751)
 )
 
 ##Ключевые особенности:
