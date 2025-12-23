@@ -7,12 +7,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-
 
 @Data
-@EqualsAndHashCode(exclude = {"id", "name"})
+@EqualsAndHashCode(of = "id")
 public class User {
     private Long id;
 
@@ -26,6 +23,5 @@ public class User {
 
     @PastOrPresent(message = "Дата рождения не может быть в будущем")
     private LocalDate birthday;
-    //Поле друзей со статусом
-    private Map<User, Boolean> friendshipStatuses = new HashMap<>();
+    // Убрали friendshipStatuses, так как теперь храним в БД
 }
