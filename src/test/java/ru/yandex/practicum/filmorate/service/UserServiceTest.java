@@ -1,85 +1,128 @@
 package ru.yandex.practicum.filmorate.service;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class UserServiceTest {
-    @Autowired
+
+    @Mock
+    private UserStorage userStorage;
+
+    @InjectMocks
     private UserService userService;
+
+    private User validUser;
+
+    @BeforeEach
+    void setUp() {
+        validUser = new User();
+        validUser.setEmail("test@mail.com");
+        validUser.setLogin("testlogin");
+        validUser.setName("Test User");
+        validUser.setBirthday(LocalDate.of(2000, 1, 1));
+    }
 
     @Test
     void createWithValidUserTest() {
-        User user = createValidUser();
+        // Arrange
+        when(userStorage.create(any(User.class))).thenReturn(validUser);
 
-        assertDoesNotThrow(() -> userService.create(user));
+        // Act
+        User result = userService.create(validUser);
+
+        // Assert
+        assertNotNull(result);
+        verify(userStorage, times(1)).create(any(User.class));
     }
 
     @Test
     void createWithInvalidEmailTest() {
-        User user = createValidUser();
-        user.setEmail("invalid-email");
+        // Arrange
+        validUser.setEmail("invalid-email");
 
-        assertThrows(ValidationException.class, () -> userService.create(user));
+        // Act & Assert
+        assertThrows(ValidationException.class, () -> userService.create(validUser));
+        verify(userStorage, never()).create(any(User.class));
+    }
+
+    @Test
+    void createWithEmptyEmailTest() {
+        // Arrange
+        validUser.setEmail("");
+
+        // Act & Assert
+        assertThrows(ValidationException.class, () -> userService.create(validUser));
+        verify(userStorage, never()).create(any(User.class));
     }
 
     @Test
     void createWithEmptyLoginTest() {
-        User user = createValidUser();
-        user.setLogin("");
+        // Arrange
+        validUser.setLogin("");
 
-        assertThrows(ValidationException.class, () -> userService.create(user));
+        // Act & Assert
+        assertThrows(ValidationException.class, () -> userService.create(validUser));
+        verify(userStorage, never()).create(any(User.class));
     }
 
     @Test
     void createLoginWithSpacesTest() {
-        User user = createValidUser();
-        user.setLogin("l o g i n");
+        // Arrange
+        validUser.setLogin("l o g i n");
 
-        assertThrows(ValidationException.class, () -> userService.create(user));
+        // Act & Assert
+        assertThrows(ValidationException.class, () -> userService.create(validUser));
+        verify(userStorage, never()).create(any(User.class));
     }
 
     @Test
     void createWithFutureBirthdayTest() {
-        User user = createValidUser();
-        user.setBirthday(LocalDate.now().plusDays(1));
+        // Arrange
+        validUser.setBirthday(LocalDate.now().plusDays(1));
 
-        assertThrows(ValidationException.class, () -> userService.create(user));
+        // Act & Assert
+        assertThrows(ValidationException.class, () -> userService.create(validUser));
+        verify(userStorage, never()).create(any(User.class));
     }
 
     @Test
     void createNameIsEmptyTest() {
-        User user = createValidUser();
-        user.setName("");
+        // Arrange
+        validUser.setName("");
+        when(userStorage.create(any(User.class))).thenReturn(validUser);
 
-        User result = userService.create(user);
+        // Act
+        User result = userService.create(validUser);
 
-        assertEquals(user.getLogin(), result.getName());
+        // Assert
+        assertEquals(validUser.getLogin(), result.getName());
+        verify(userStorage, times(1)).create(any(User.class));
     }
 
     @Test
     void createNameIsNullTest() {
-        User user = createValidUser();
-        user.setName(null);
+        // Arrange
+        validUser.setName(null);
+        when(userStorage.create(any(User.class))).thenReturn(validUser);
 
-        User result = userService.create(user);
+        // Act
+        User result = userService.create(validUser);
 
-        assertEquals(user.getLogin(), result.getName());
-    }
-
-    private User createValidUser() {
-        User user = new User();
-        user.setEmail("test@mail.com");
-        user.setLogin("testlogin");
-        user.setName("Test User");
-        user.setBirthday(LocalDate.of(2025, 1, 1));
-        return user;
+        // Assert
+        assertEquals(validUser.getLogin(), result.getName());
+        verify(userStorage, times(1)).create(any(User.class));
     }
 }
