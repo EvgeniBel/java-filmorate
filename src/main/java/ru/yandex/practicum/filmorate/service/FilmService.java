@@ -39,86 +39,35 @@ public class FilmService {
     }
 
     public Film findById(Long filmId) {
-        return findFilmOrThrow(filmId);
+        return findFilm(filmId);
     }
 
     public Film create(Film film) {
-        validatedFilm(film);
-
-        if (film.getMpa() == null || film.getMpa().getId() == null) {
-            throw new ValidationException("MPA рейтинг должен быть указан");
-        }
-
-        RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
-        film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
-
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            List<GenreDto> validatedGenres = new ArrayList<>();
-            Set<Long> seenIds = new HashSet<>();
-
-            for (GenreDto genreDto : film.getGenres()) {
-                Genre genre = Genre.fromId(genreDto.getId());
-                if (!seenIds.contains(genre.getId())) {
-                    seenIds.add(genre.getId());
-                    validatedGenres.add(new GenreDto(genre.getId(), genre.getName()));
-                }
-            }
-            film.setGenres(validatedGenres);
-        }
+        validateAndProcessFilm(film);
         return filmStorage.create(film);
     }
 
 
     public Film update(Film film) {
-        findFilmOrThrow(film.getId());
-        validatedFilm(film);
-
-        if (film.getMpa() == null || film.getMpa().getId() == null) {
-            throw new ValidationException("MPA рейтинг должен быть указан");
-        }
-
-        try {
-            RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
-            film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
-        } catch (NotFoundException e) {
-            throw new ValidationException("Неверный ID рейтинга MPA: " + film.getMpa().getId());
-        }
-
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            List<GenreDto> validatedGenres = new ArrayList<>();
-            Set<Long> seenIds = new HashSet<>();
-
-            for (GenreDto genreDto : film.getGenres()) {
-                try {
-                    Genre genre = Genre.fromId(genreDto.getId());
-                    if (!seenIds.contains(genre.getId())) {
-                        seenIds.add(genre.getId());
-                        validatedGenres.add(new GenreDto(genre.getId(), genre.getName()));
-                    }
-                } catch (NotFoundException e) {
-                    throw new ValidationException("Неверный ID жанра: " + genreDto.getId());
-                }
-            }
-            film.setGenres(validatedGenres);
-        }
-
+        findFilm(film.getId());
+        validateAndProcessFilm(film);
         return filmStorage.update(film);
     }
 
     public void delete(Long filmId) {
-        findFilmOrThrow(filmId);
+        findFilm(filmId);
         filmStorage.delete(filmId);
     }
 
     public void addLike(Long filmId, Long userId) {
-        findFilmOrThrow(filmId);
-        findUserOrThrow(userId);
+        findFilm(filmId);
+        findUser(userId);
         filmStorage.addLike(filmId, userId);
     }
 
     public void removeLike(Long filmId, Long userId) {
-        findFilmOrThrow(filmId);
-        findUserOrThrow(userId);
+        findFilm(filmId);
+        findUser(userId);
         filmStorage.removeLike(filmId, userId);
     }
 
@@ -147,13 +96,52 @@ public class FilmService {
         }
     }
 
-    private Film findFilmOrThrow(Long filmId) {
+    private Film findFilm(Long filmId) {
         return filmStorage.findById(filmId)
                 .orElseThrow(() -> new NotFoundException(String.format("Фильм с id = %d не найден", filmId)));
     }
 
-    private User findUserOrThrow(Long userId) {
+    private User findUser(Long userId) {
         return userStorage.findById(userId)
                 .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден", userId)));
+    }
+
+    private void validateAndProcessFilm(Film film) {
+        validatedFilm(film);
+        validateAndProcessMpa(film);
+        validateAndProcessGenres(film);
+    }
+
+    private void validateAndProcessMpa(Film film) {
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
+
+        try {
+            RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
+            film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+        } catch (NotFoundException e) {
+            throw new NotFoundException("Неверный ID рейтинга MPA: " + film.getMpa().getId());
+        }
+    }
+
+    private void validateAndProcessGenres(Film film) {
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            List<GenreDto> validatedGenres = new ArrayList<>();
+            Set<Long> seenIds = new HashSet<>();
+
+            for (GenreDto genreDto : film.getGenres()) {
+                try {
+                    Genre genre = Genre.fromId(genreDto.getId());
+                    if (!seenIds.contains(genre.getId())) {
+                        seenIds.add(genre.getId());
+                        validatedGenres.add(new GenreDto(genre.getId(), genre.getName()));
+                    }
+                } catch (NotFoundException e) {
+                    throw new NotFoundException("Неверный ID жанра: " + genreDto.getId());
+                }
+            }
+            film.setGenres(validatedGenres);
+        }
     }
 }
