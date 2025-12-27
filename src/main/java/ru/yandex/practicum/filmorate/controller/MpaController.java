@@ -26,14 +26,19 @@ public class MpaController {
     }
 
     @GetMapping("/{id}")
-        private RatingMPA getRatingById(Long id) {
-        return switch (id.intValue()) {
-            case 1 -> RatingMPA.G;
-            case 2 -> RatingMPA.PG;
-            case 3 -> RatingMPA.PG_13;
-            case 4 -> RatingMPA.R;
-            case 5 -> RatingMPA.NC_17;
-            default -> throw new IllegalArgumentException("Рейтинг MPA с id=" + id + " не найден");
-        };
+    private MpaDto getRatingById(@PathVariable Long id) {
+        try {
+            RatingMPA rating = switch (id.intValue()) {
+                case 1 -> RatingMPA.G;
+                case 2 -> RatingMPA.PG;
+                case 3 -> RatingMPA.PG_13;
+                case 4 -> RatingMPA.R;
+                case 5 -> RatingMPA.NC_17;
+                default -> throw new IllegalArgumentException("Рейтинг MPA с id=" + id + " не найден");
+            };
+            return MpaDto.fromRatingMPA(rating);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Рейтинг MPA не найден", e);
+        }
     }
 }
