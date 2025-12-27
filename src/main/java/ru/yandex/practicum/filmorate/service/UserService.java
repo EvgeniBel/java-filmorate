@@ -17,7 +17,7 @@ public class UserService {
 
     @Autowired
     public UserService(@Qualifier("userDbStorage") UserStorage userStorage) {
-        this.userStorage = userStorage;
+        this.userStorage = userStorage; // Будет использоваться только UserDbStorage
     }
 
     public List<User> findAll() {
@@ -47,8 +47,7 @@ public class UserService {
     }
 
     public void addFriend(Long userId, Long friendId) {
-        findUserOrThrow(userId);
-        findUserOrThrow(friendId);
+        validateFriendRequest(userId, friendId);
         userStorage.addFriend(userId, friendId);
     }
 
@@ -70,7 +69,6 @@ public class UserService {
     }
 
     public void validateUser(User user) {
-
         if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             throw new ValidationException("Электронная почта не может быть пустой и должна содержать символ @");
         }
@@ -79,6 +77,34 @@ public class UserService {
         }
         if (user.getBirthday() != null && user.getBirthday().isAfter(LocalDate.now())) {
             throw new ValidationException("Дата рождения не может быть в будущем");
+        }
+    }
+
+    private void validateFriendRequest(Long userId, Long friendId) {
+        if (userId.equals(friendId)) {
+            throw new ValidationException("Пользователь не может добавить самого себя в друзья");
+        }
+        findUserOrThrow(userId);
+        findUserOrThrow(friendId);
+
+        // Проверяем, не отправил ли уже пользователь заявку
+        String checkSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
+        Integer count = ((org.springframework.jdbc.core.JdbcTemplate) userStorage).queryForObject(
+                checkSql, Integer.class, userId, friendId);
+
+        if (count != null && count > 0) {
+            throw new ValidationException("Заявка в друзья уже отправлена");
+        }
+    }
+
+    private void validateFriendConfirmation(Long userId, Long friendId) {
+        // Проверяем, что friendId действительно отправил заявку userId
+        String checkSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'PENDING'";
+        Integer count = ((org.springframework.jdbc.core.JdbcTemplate) userStorage).queryForObject(
+                checkSql, Integer.class, friendId, userId);
+
+        if (count == null || count == 0) {
+            throw new ValidationException("Заявка в друзья не найдена или уже обработана");
         }
     }
 
@@ -91,5 +117,16 @@ public class UserService {
     private User findUserOrThrow(Long userId) {
         return userStorage.findById(userId)
                 .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден", userId)));
+    }
+
+    public void confirmFriend(Long userId, Long friendId) {
+        findUserOrThrow(userId);
+        findUserOrThrow(friendId);
+        userStorage.confirmFriend(userId, friendId);
+    }
+
+    public List<User> getFriendRequests(Long userId) {
+        findUserOrThrow(userId);
+        return userStorage.getFriendRequests(userId);
     }
 }

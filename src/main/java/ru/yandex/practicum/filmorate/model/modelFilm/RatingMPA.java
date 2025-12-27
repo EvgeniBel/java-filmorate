@@ -28,5 +28,5 @@ public enum RatingMPA {
         }
         throw new IllegalArgumentException("Неизвестный рейтинг MPA: " + code);
     }
-}
 
+}

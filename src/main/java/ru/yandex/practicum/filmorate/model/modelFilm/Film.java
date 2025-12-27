@@ -1,10 +1,10 @@
 package ru.yandex.practicum.filmorate.model.modelFilm;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -26,8 +26,7 @@ public class Film {
     @Positive(message = "Продолжительность должна быть положительной")
     private int duration;
 
-    private String mpaRating;
+    private RatingMPA mpa; // Используем enum
     private Set<Genre> genres = new HashSet<>();
     private Set<Long> likes = new HashSet<>();
 }
-

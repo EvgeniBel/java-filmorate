@@ -24,7 +24,6 @@ public class FilmDbStorageTest {
 
     @Test
     void testFindFilmById() {
-        // Сначала создаем фильм для тестирования
         Film testFilm = new Film();
         testFilm.setName("Test Film");
         testFilm.setDescription("Test Description");
@@ -34,7 +33,6 @@ public class FilmDbStorageTest {
         Film savedFilm = filmStorage.create(testFilm);
         Long filmId = savedFilm.getId();
 
-        // Теперь ищем созданный фильм
         Optional<Film> filmOptional = filmStorage.findById(filmId);
 
         assertThat(filmOptional)

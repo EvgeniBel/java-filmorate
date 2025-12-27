@@ -1,4 +1,5 @@
 package ru.yandex.practicum.filmorate;
+
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,8 +8,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import ru.yandex.practicum.filmorate.model.modelFilm.Film;
-import ru.yandex.practicum.filmorate.model.modelFilm.Genre;
+import ru.yandex.practicum.filmorate.model.modelFilm.*;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
 import ru.yandex.practicum.filmorate.storage.db.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.db.UserDbStorage;
@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA.*;
+
 
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -39,11 +41,11 @@ class FilmorateApplicationTests {
 
         // Вставляем жанры, если их нет
         jdbcTemplate.execute("""
-            MERGE INTO genres (id, name) KEY(id) VALUES (1, 'Комедия')
-            """);
+                MERGE INTO genres (id, name) KEY(id) VALUES (1, 'Комедия')
+                """);
         jdbcTemplate.execute("""
-            MERGE INTO genres (id, name) KEY(id) VALUES (2, 'Драма')
-            """);
+                MERGE INTO genres (id, name) KEY(id) VALUES (2, 'Драма')
+                """);
     }
 
     @Test
@@ -80,7 +82,7 @@ class FilmorateApplicationTests {
         film.setDescription("Test Description");
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
         film.setDuration(120);
-        film.setMpaRating("PG-13");
+        film.setMpa(G);
 
         // Добавляем жанры
         film.setGenres(new java.util.HashSet<>());
@@ -121,7 +123,7 @@ class FilmorateApplicationTests {
         film.setDescription("Description");
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
         film.setDuration(120);
-        film.setMpaRating("PG-13");
+        film.setMpa(G);
         Film createdFilm = filmStorage.create(film);
 
         // Добавляем лайк
@@ -144,7 +146,7 @@ class FilmorateApplicationTests {
             film.setDescription("Description " + i);
             film.setReleaseDate(LocalDate.of(2020, i, i));
             film.setDuration(100 + i);
-            film.setMpaRating("PG-13");
+            film.setMpa(G);
             filmStorage.create(film);
         }
 

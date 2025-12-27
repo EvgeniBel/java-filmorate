@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.storage.db;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -9,16 +8,15 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.modelFilm.Film;
 import ru.yandex.practicum.filmorate.model.modelFilm.Genre;
+import ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
-@Qualifier("filmDbStorage")
 public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
@@ -35,7 +33,13 @@ public class FilmDbStorage implements FilmStorage {
         film.setDescription(rs.getString("description"));
         film.setReleaseDate(rs.getDate("release_date").toLocalDate());
         film.setDuration(rs.getInt("duration"));
-        film.setMpaRating(rs.getString("mpa_rating"));
+
+        // Загружаем MPA из enum по коду
+        String mpaCode = rs.getString("mpa_rating");
+        if (mpaCode != null) {
+            film.setMpa(RatingMPA.fromCode(mpaCode));
+        }
+
         return film;
     };
 
@@ -68,7 +72,7 @@ public class FilmDbStorage implements FilmStorage {
             ps.setString(2, film.getDescription());
             ps.setDate(3, Date.valueOf(film.getReleaseDate()));
             ps.setInt(4, film.getDuration());
-            ps.setString(5, film.getMpaRating());
+            ps.setString(5, film.getMpa() != null ? film.getMpa().getCode() : null);
             return ps;
         }, keyHolder);
 
@@ -90,7 +94,7 @@ public class FilmDbStorage implements FilmStorage {
                 film.getDescription(),
                 Date.valueOf(film.getReleaseDate()),
                 film.getDuration(),
-                film.getMpaRating(),
+                film.getMpa() != null ? film.getMpa().getCode() : null,
                 film.getId());
 
         // Обновляем жанры
@@ -128,27 +132,34 @@ public class FilmDbStorage implements FilmStorage {
                 "ORDER BY like_count DESC " +
                 "LIMIT ?";
 
-        return jdbcTemplate.query(sql, filmRowMapper, count);
+        List<Film> films = jdbcTemplate.query(sql, filmRowMapper, count);
+        films.forEach(this::loadFilmData);
+        return films;
     }
 
     private void saveGenres(Film film) {
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             String sql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
-            for (Genre genre : film.getGenres()) {
-                jdbcTemplate.update(sql, film.getId(), genre.getId());
+            // Убираем дубликаты жанров перед сохранением
+            Set<Long> uniqueGenreIds = film.getGenres().stream()
+                    .map(Genre::getId)
+                    .collect(Collectors.toSet());
+
+            for (Long genreId : uniqueGenreIds) {
+                jdbcTemplate.update(sql, film.getId(), genreId);
             }
         }
     }
 
     private void loadFilmData(Film film) {
         // Загружаем жанры
-        String genresSql = "SELECT g.id, g.name FROM genres g " +
-                "JOIN film_genres fg ON g.id = fg.genre_id " +
-                "WHERE fg.film_id = ?";
-        List<Genre> genres = jdbcTemplate.query(genresSql, (rs, rowNum) -> {
-            return Genre.fromId(rs.getLong("id"));
-        }, film.getId());
-        film.setGenres(new HashSet<>(genres));
+        String genresSql = "SELECT genre_id FROM film_genres WHERE film_id = ?";
+        List<Long> genreIds = jdbcTemplate.queryForList(genresSql, Long.class, film.getId());
+
+        Set<Genre> genres = genreIds.stream()
+                .map(Genre::fromId) // Используем метод fromId из enum
+                .collect(Collectors.toSet());
+        film.setGenres(genres);
 
         // Загружаем лайки
         String likesSql = "SELECT user_id FROM likes WHERE film_id = ?";
