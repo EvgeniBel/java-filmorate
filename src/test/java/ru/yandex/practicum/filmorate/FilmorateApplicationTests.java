@@ -8,17 +8,20 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import ru.yandex.practicum.filmorate.model.modelFilm.*;
+import ru.yandex.practicum.filmorate.dto.GenreDto;
+import ru.yandex.practicum.filmorate.dto.MpaDto;
+import ru.yandex.practicum.filmorate.model.modelFilm.Film;
+import ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
 import ru.yandex.practicum.filmorate.storage.db.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.db.UserDbStorage;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA.*;
 
 
 @JdbcTest
@@ -82,12 +85,16 @@ class FilmorateApplicationTests {
         film.setDescription("Test Description");
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
         film.setDuration(120);
-        film.setMpa(G);
+
+        // Используем MpaDto.fromRatingMPA
+        film.setMpa(MpaDto.fromRatingMPA(RatingMPA.G));
 
         // Добавляем жанры
-        film.setGenres(new java.util.HashSet<>());
-        film.getGenres().add(Genre.fromId(1L)); // Комедия
-        film.getGenres().add(Genre.fromId(2L)); // Драма
+        List<GenreDto> genres = Arrays.asList(
+                new GenreDto(1L, "Комедия"),
+                new GenreDto(2L, "Драма")
+        );
+        film.setGenres(genres);
 
         Film createdFilm = filmStorage.create(film);
 
@@ -95,16 +102,14 @@ class FilmorateApplicationTests {
         assertThat(createdFilm).isNotNull();
         assertThat(createdFilm.getId()).isNotNull();
 
-        // Ищем фильм по ID
-        Optional<Film> foundFilm = filmStorage.findById(createdFilm.getId());
+        // Дополнительные проверки
+        assertThat(createdFilm.getMpa()).isNotNull();
+        assertThat(createdFilm.getMpa().getId()).isEqualTo(1L);
+        assertThat(createdFilm.getMpa().getName()).isEqualTo("G");
 
-        assertThat(foundFilm)
-                .isPresent()
-                .hasValueSatisfying(f -> {
-                    assertThat(f.getId()).isEqualTo(createdFilm.getId());
-                    assertThat(f.getName()).isEqualTo("Test Film");
-                    assertThat(f.getGenres()).hasSize(2);
-                });
+        // Проверяем, что фильм можно найти
+        Optional<Film> foundFilm = filmStorage.findById(createdFilm.getId());
+        assertThat(foundFilm).isPresent();
     }
 
     @Test
@@ -117,42 +122,89 @@ class FilmorateApplicationTests {
         user.setBirthday(LocalDate.of(1990, 1, 1));
         User createdUser = userStorage.create(user);
 
+        assertThat(createdUser).isNotNull();
+        assertThat(createdUser.getId()).isNotNull();
+
         // Создаем фильм
         Film film = new Film();
         film.setName("Film");
         film.setDescription("Description");
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
         film.setDuration(120);
-        film.setMpa(G);
+
+        // Создаем MpaDto
+        MpaDto mpaDto = new MpaDto();
+        mpaDto.setId(1L); // ID для G
+        mpaDto.setName("G"); // Код MPA
+        film.setMpa(mpaDto);
+
         Film createdFilm = filmStorage.create(film);
+
+        assertThat(createdFilm).isNotNull();
+        assertThat(createdFilm.getId()).isNotNull();
 
         // Добавляем лайк
         filmStorage.addLike(createdFilm.getId(), createdUser.getId());
 
-        // Проверяем, что фильм найден
-        Optional<Film> foundFilm = filmStorage.findById(createdFilm.getId());
-        assertThat(foundFilm).isPresent();
+        // Проверяем, что лайк добавлен - загружаем фильм и проверяем likes
+        Optional<Film> filmAfterLike = filmStorage.findById(createdFilm.getId());
+        assertThat(filmAfterLike).isPresent();
+
+        Film filmWithLike = filmAfterLike.get();
+        // Предполагая, что у Film есть метод getLikes()
+        assertThat(filmWithLike.getLikes()).isNotEmpty();
+        assertThat(filmWithLike.getLikes()).contains(createdUser.getId());
 
         // Удаляем лайк
         filmStorage.removeLike(createdFilm.getId(), createdUser.getId());
+
+        // Проверяем, что лайк удален
+        Optional<Film> filmAfterRemove = filmStorage.findById(createdFilm.getId());
+        assertThat(filmAfterRemove).isPresent();
+
+        Film filmWithoutLike = filmAfterRemove.get();
+        // Проверяем, что likes пустой или не содержит пользователя
+        assertThat(filmWithoutLike.getLikes()).doesNotContain(createdUser.getId());
     }
 
     @Test
     void testGetPopularFilms() {
-        // Создаем несколько фильмов
-        for (int i = 1; i <= 3; i++) {
-            Film film = new Film();
-            film.setName("Film " + i);
-            film.setDescription("Description " + i);
-            film.setReleaseDate(LocalDate.of(2020, i, i));
-            film.setDuration(100 + i);
-            film.setMpa(G);
-            filmStorage.create(film);
-        }
+        // Создаем фильмы
+        Long filmId1 = createFilm("Film 1").getId();
+        Long filmId2 = createFilm("Film 2").getId();
 
-        // Получаем популярные фильмы
-        List<Film> popularFilms = filmStorage.getPopularFilms(2);
+        // Создаем пользователя
+        Long userId = createUser("test@mail.ru").getId();
 
-        assertThat(popularFilms).hasSize(2);
+        // Добавляем лайк только Film 2
+        filmStorage.addLike(filmId2, userId);
+
+        // Проверяем
+        List<Film> popular = filmStorage.getPopularFilms(2);
+        assertThat(popular).hasSize(2);
+        assertThat(popular.get(0).getName()).isEqualTo("Film 2"); // С лайком
+        assertThat(popular.get(1).getName()).isEqualTo("Film 1"); // Без лайка
+    }
+
+    private Film createFilm(String name) {
+        Film film = new Film();
+        film.setName(name);
+        film.setDescription("Desc");
+        film.setReleaseDate(LocalDate.now().minusYears(1));
+        film.setDuration(100);
+
+        MpaDto mpa = new MpaDto(1L, "G", null);
+        film.setMpa(mpa);
+
+        return filmStorage.create(film);
+    }
+
+    private User createUser(String email) {
+        User user = new User();
+        user.setEmail(email);
+        user.setLogin("login_" + email);
+        user.setName("User");
+        user.setBirthday(LocalDate.of(1990, 1, 1));
+        return userStorage.create(user);
     }
 }

@@ -3,6 +3,9 @@ package ru.yandex.practicum.filmorate.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA;
+
+import java.util.Objects;
 
 @Data
 @NoArgsConstructor
@@ -10,16 +13,10 @@ import lombok.NoArgsConstructor;
 public class MpaDto {
     private Long id;
     private String name;
+    private String description;
 
-    public static MpaDto fromRatingMPA(ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA rating) {
-        // Сопоставляем enum с ID (1-5)
-        Long id = switch (rating) {
-            case G -> 1L;
-            case PG -> 2L;
-            case PG_13 -> 3L;
-            case R -> 4L;
-            case NC_17 -> 5L;
-        };
-        return new MpaDto(id, rating.getCode());
+    public static MpaDto fromRatingMPA(RatingMPA rating) {
+        Objects.requireNonNull(rating, "RatingMPA не должен быть null");
+        return new MpaDto(rating.getId(), rating.getCode(), rating.getDescription());
     }
 }

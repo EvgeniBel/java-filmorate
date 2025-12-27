@@ -63,14 +63,17 @@ public class UserController {
     public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         userService.addFriend(id, friendId);
     }
+
     @DeleteMapping(USER_BY_ID)
     public void delete(@PathVariable Long id) {
         userService.delete(id);
     }
+
     @DeleteMapping(USER_FRIENDS)
     public void removeFriend(@PathVariable Long id, @PathVariable Long friendId) {
         userService.removeFriend(id, friendId);
     }
+
     @PutMapping(CONFIRM_FRIEND)
     public void confirmFriend(@PathVariable Long id, @PathVariable Long friendId) {
         userService.confirmFriend(id, friendId);

@@ -3,15 +3,22 @@ package ru.yandex.practicum.filmorate.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dto.GenreDto;
+import ru.yandex.practicum.filmorate.dto.MpaDto;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.modelFilm.Film;
+import ru.yandex.practicum.filmorate.model.modelFilm.Genre;
+import ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class FilmService {
@@ -37,12 +44,64 @@ public class FilmService {
 
     public Film create(Film film) {
         validatedFilm(film);
+
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
+
+        RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
+        film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            List<GenreDto> validatedGenres = new ArrayList<>();
+            Set<Long> seenIds = new HashSet<>();
+
+            for (GenreDto genreDto : film.getGenres()) {
+                Genre genre = Genre.fromId(genreDto.getId());
+                if (!seenIds.contains(genre.getId())) {
+                    seenIds.add(genre.getId());
+                    validatedGenres.add(new GenreDto(genre.getId(), genre.getName()));
+                }
+            }
+            film.setGenres(validatedGenres);
+        }
         return filmStorage.create(film);
     }
+
 
     public Film update(Film film) {
         findFilmOrThrow(film.getId());
         validatedFilm(film);
+
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
+
+        try {
+            RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
+            film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+        } catch (NotFoundException e) {
+            throw new ValidationException("Неверный ID рейтинга MPA: " + film.getMpa().getId());
+        }
+
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            List<GenreDto> validatedGenres = new ArrayList<>();
+            Set<Long> seenIds = new HashSet<>();
+
+            for (GenreDto genreDto : film.getGenres()) {
+                try {
+                    Genre genre = Genre.fromId(genreDto.getId());
+                    if (!seenIds.contains(genre.getId())) {
+                        seenIds.add(genre.getId());
+                        validatedGenres.add(new GenreDto(genre.getId(), genre.getName()));
+                    }
+                } catch (NotFoundException e) {
+                    throw new ValidationException("Неверный ID жанра: " + genreDto.getId());
+                }
+            }
+            film.setGenres(validatedGenres);
+        }
+
         return filmStorage.update(film);
     }
 
@@ -74,18 +133,17 @@ public class FilmService {
         if (film.getDescription() != null && film.getDescription().length() > 200) {
             throw new ValidationException("Максимальная длина описания — 200 символов");
         }
-
         if (film.getReleaseDate() == null) {
             throw new ValidationException("Дата релиза должна быть указана");
         }
         if (film.getReleaseDate().isBefore(minReleaseDate)) {
             throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
         }
-        if (film.getReleaseDate().isAfter(LocalDate.now())) {
-            throw new ValidationException("Дата релиза не может быть в будущем");
-        }
         if (film.getDuration() <= 0) {
             throw new ValidationException("Продолжительность фильма должна быть положительным числом");
+        }
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
         }
     }
 

@@ -5,7 +5,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
@@ -16,8 +18,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
-@Qualifier("userDbStorage")
+@Repository("userDbStorage")
 public class UserDbStorage implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;
@@ -50,14 +51,14 @@ public class UserDbStorage implements UserStorage {
     public Optional<User> findById(Long id) {
         String sql = "SELECT * FROM users WHERE id = ?";
         List<User> users = jdbcTemplate.query(sql, userRowMapper, id);
-        return users.isEmpty() ? Optional.empty() : Optional.of(users.get(0));
+        return users.stream().findFirst();
     }
 
     @Override
     public User create(User user) {
         String sql = "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)";
 
-        GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
+        KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
@@ -86,89 +87,100 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void delete(Long id) {
-        // Сначала удаляем связи друзей
+        // Сначала удаляем связи
         jdbcTemplate.update("DELETE FROM friends WHERE user_id = ? OR friend_id = ?", id, id);
+        jdbcTemplate.update("DELETE FROM likes WHERE user_id = ?", id);
         // Затем удаляем пользователя
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", id);
     }
 
-    // ========== МЕТОДЫ ДЛЯ ОДНОСТОРОННЕЙ ДРУЖБЫ ==========
+    // ========== МЕТОДЫ ДЛЯ ДРУЗЕЙ ==========
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        // Односторонняя дружба: userId отправляет заявку friendId
-        String sql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'PENDING') " +
-                "ON CONFLICT (user_id, friend_id) DO NOTHING";
+        // Проверяем, что не добавляем самого себя
+        if (userId.equals(friendId)) {
+            throw new ValidationException("Пользователь не может добавить самого себя в друзья");
+        }
+
+        // Проверяем существование пользователей
+        String checkUsersSql = "SELECT COUNT(*) FROM users WHERE id IN (?, ?)";
+        Integer userCount = jdbcTemplate.queryForObject(checkUsersSql, Integer.class, userId, friendId);
+
+        if (userCount == null || userCount != 2) {
+            throw new ValidationException("Один или оба пользователя не существуют");
+        }
+
+        // Проверяем, не добавлен ли уже друг
+        String checkFriendshipSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
+        Integer existingCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId);
+
+        if (existingCount != null && existingCount > 0) {
+            throw new ValidationException("Пользователь уже добавлен в друзья");
+        }
+
+        // Односторонняя дружба: userId -> friendId
+        String sql = "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)";
         jdbcTemplate.update(sql, userId, friendId);
+
+        System.out.println("Друг добавлен: " + userId + " -> " + friendId);
     }
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
-        // Удаление заявки/дружбы (userId удаляет friendId из друзей)
         String sql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
-        jdbcTemplate.update(sql, userId, friendId);
-    }
+        int rows = jdbcTemplate.update(sql, userId, friendId);
 
-    @Override
-    public void confirmFriend(Long userId, Long friendId) {
-        // Пользователь userId подтверждает заявку от friendId
-        String checkSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ? AND status = 'PENDING'";
-        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, friendId, userId);
-
-        if (count == null || count == 0) {
-            // Вместо исключения просто ничего не делаем или логируем
-            System.out.println("Заявка в друзья не найдена или уже обработана: userId=" + userId + ", friendId=" + friendId);
-            return; // Или можно выбросить ValidationException
+        if (rows == 0) {
+            System.out.println("Друг не найден для удаления: " + userId + " -> " + friendId);
+        } else {
+            System.out.println("Друг удален: " + userId + " -> " + friendId);
         }
-
-        // Меняем статус на 'CONFIRMED' (подтверждено)
-        String sql = "UPDATE friends SET status = 'CONFIRMED' WHERE user_id = ? AND friend_id = ?";
-        jdbcTemplate.update(sql, friendId, userId);
-    }
-
-    @Override
-    public List<User> getFriendRequests(Long userId) {
-        // Заявки, которые другие отправили данному пользователю
-        String sql = """
-        SELECT u.* FROM users u 
-        JOIN friends f ON u.id = f.user_id 
-        WHERE f.friend_id = ? AND f.status = 'PENDING'
-        """;
-        return jdbcTemplate.query(sql, userRowMapper, userId);
     }
 
     @Override
     public List<User> getFriends(Long userId) {
-        // Получаем только тех, кого пользователь добавил И подтвердил
+        // Получаем всех, кого пользователь добавил в друзья
         String sql = """
-        SELECT u.* FROM users u 
-        JOIN friends f ON u.id = f.friend_id 
-        WHERE f.user_id = ? AND f.status = 'CONFIRMED'
-        """;
-        return jdbcTemplate.query(sql, userRowMapper, userId);
+            SELECT u.* 
+            FROM users u 
+            INNER JOIN friends f ON u.id = f.friend_id 
+            WHERE f.user_id = ? 
+            ORDER BY u.id
+            """;
+
+        List<User> friends = jdbcTemplate.query(sql, userRowMapper, userId);
+        System.out.println("Найдено друзей для пользователя " + userId + ": " + friends.size());
+        return friends;
     }
 
     @Override
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        // Общие друзья - это пользователи, которые являются подтвержденными друзьями обоих
+        // Общие друзья - те, кого оба пользователя добавили в друзья
         String sql = """
-                SELECT u.* FROM users u 
-                JOIN friends f1 ON u.id = f1.friend_id 
-                JOIN friends f2 ON u.id = f2.friend_id 
-                WHERE f1.user_id = ? AND f2.user_id = ? 
-                AND f1.status = 'CONFIRMED' AND f2.status = 'CONFIRMED'
-                AND u.id NOT IN (?, ?)
-                UNION
-                SELECT u.* FROM users u 
-                JOIN friends f1 ON u.id = f1.user_id 
-                JOIN friends f2 ON u.id = f2.user_id 
-                WHERE f1.friend_id = ? AND f2.friend_id = ? 
-                AND f1.status = 'CONFIRMED' AND f2.status = 'CONFIRMED'
-                AND u.id NOT IN (?, ?)
-                ORDER BY id
-                """;
-        return jdbcTemplate.query(sql, userRowMapper,
-                userId, otherId, userId, otherId,
-                userId, otherId, userId, otherId);
+            SELECT u.* FROM users u 
+            WHERE u.id IN (
+                SELECT friend_id FROM friends WHERE user_id = ?
+                INTERSECT
+                SELECT friend_id FROM friends WHERE user_id = ?
+            )
+            ORDER BY u.id
+            """;
+        return jdbcTemplate.query(sql, userRowMapper, userId, otherId);
+    }
+
+    // ========== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ (не используются в односторонней системе) ==========
+
+    @Override
+    public void confirmFriend(Long userId, Long friendId) {
+        // Для односторонней системы подтверждение не требуется
+        System.out.println("confirmFriend не используется в односторонней системе друзей");
+    }
+
+    @Override
+    public List<User> getFriendRequests(Long userId) {
+        // Для односторонней системы запросы не используются
+        System.out.println("getFriendRequests не используется в односторонней системе друзей");
+        return List.of();
     }
 }

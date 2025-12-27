@@ -1,13 +1,18 @@
 package ru.yandex.practicum.filmorate.model.modelFilm;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import ru.yandex.practicum.filmorate.dto.GenreDto;
+import ru.yandex.practicum.filmorate.dto.MpaDto;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -26,7 +31,10 @@ public class Film {
     @Positive(message = "Продолжительность должна быть положительной")
     private int duration;
 
-    private RatingMPA mpa; // Используем enum
-    private Set<Genre> genres = new HashSet<>();
+    private MpaDto mpa;
+
+    private List<GenreDto> genres = new ArrayList<>();
+
+    @JsonIgnore
     private Set<Long> likes = new HashSet<>();
 }

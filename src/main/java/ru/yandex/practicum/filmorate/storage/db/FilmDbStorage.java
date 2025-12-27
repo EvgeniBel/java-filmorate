@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.dto.GenreDto;
+import ru.yandex.practicum.filmorate.dto.MpaDto;
 import ru.yandex.practicum.filmorate.model.modelFilm.Film;
 import ru.yandex.practicum.filmorate.model.modelFilm.Genre;
 import ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA;
@@ -34,10 +36,19 @@ public class FilmDbStorage implements FilmStorage {
         film.setReleaseDate(rs.getDate("release_date").toLocalDate());
         film.setDuration(rs.getInt("duration"));
 
-        // Загружаем MPA из enum по коду
+        // ВАЖНО: Загружаем MPA как DTO
         String mpaCode = rs.getString("mpa_rating");
-        if (mpaCode != null) {
-            film.setMpa(RatingMPA.fromCode(mpaCode));
+        if (mpaCode != null && !mpaCode.isEmpty()) {
+            try {
+                // Получаем RatingMPA по коду
+                RatingMPA rating = RatingMPA.fromCode(mpaCode);
+                // Создаем MpaDto
+                film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+            } catch (Exception e) {
+                System.err.println("Error loading MPA rating for film " + film.getId() + ": " + e.getMessage());
+            }
+        } else {
+            System.err.println("Warning: mpa_rating is null or empty for film " + film.getId());
         }
 
         return film;
@@ -72,14 +83,27 @@ public class FilmDbStorage implements FilmStorage {
             ps.setString(2, film.getDescription());
             ps.setDate(3, Date.valueOf(film.getReleaseDate()));
             ps.setInt(4, film.getDuration());
-            ps.setString(5, film.getMpa() != null ? film.getMpa().getCode() : null);
+
+            // Получаем код MPA из DTO
+            String mpaCode = null;
+            if (film.getMpa() != null) {
+                // Проверяем, что MPA ID валидный
+                if (film.getMpa().getId() != null) {
+                    RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
+                    mpaCode = rating.getCode();
+                    // Обновляем DTO с правильными данными
+                    film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+                }
+            }
+            ps.setString(5, mpaCode);
             return ps;
         }, keyHolder);
 
         film.setId(keyHolder.getKey().longValue());
-
-        // Сохраняем жанры
         saveGenres(film);
+
+        // Загружаем полные данные (включая жанры)
+        loadFilmData(film);
 
         return film;
     }
@@ -89,18 +113,34 @@ public class FilmDbStorage implements FilmStorage {
         String sql = "UPDATE films SET name = ?, description = ?, release_date = ?, " +
                 "duration = ?, mpa_rating = ? WHERE id = ?";
 
+        // Получаем код MPA
+        String mpaCode = null;
+        if (film.getMpa() != null && film.getMpa().getId() != null) {
+            try {
+                RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
+                mpaCode = rating.getCode();
+                // Обновляем DTO
+                film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+            } catch (Exception e) {
+                System.err.println("Error updating MPA for film " + film.getId() + ": " + e.getMessage());
+            }
+        }
+
         jdbcTemplate.update(sql,
                 film.getName(),
                 film.getDescription(),
                 Date.valueOf(film.getReleaseDate()),
                 film.getDuration(),
-                film.getMpa() != null ? film.getMpa().getCode() : null,
+                mpaCode,
                 film.getId());
 
         // Обновляем жанры
         String deleteGenresSql = "DELETE FROM film_genres WHERE film_id = ?";
         jdbcTemplate.update(deleteGenresSql, film.getId());
         saveGenres(film);
+
+        // Загружаем полные данные
+        loadFilmData(film);
 
         return film;
     }
@@ -140,10 +180,12 @@ public class FilmDbStorage implements FilmStorage {
     private void saveGenres(Film film) {
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             String sql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
-            // Убираем дубликаты жанров перед сохранением
-            Set<Long> uniqueGenreIds = film.getGenres().stream()
-                    .map(Genre::getId)
-                    .collect(Collectors.toSet());
+
+            // Убираем дубликаты, сохраняя порядок первого вхождения
+            List<Long> uniqueGenreIds = film.getGenres().stream()
+                    .map(GenreDto::getId)
+                    .distinct()
+                    .collect(Collectors.toList());
 
             for (Long genreId : uniqueGenreIds) {
                 jdbcTemplate.update(sql, film.getId(), genreId);
@@ -152,14 +194,37 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private void loadFilmData(Film film) {
-        // Загружаем жанры
-        String genresSql = "SELECT genre_id FROM film_genres WHERE film_id = ?";
+        // Загружаем жанры с сохранением порядка
+        String genresSql = "SELECT genre_id FROM film_genres WHERE film_id = ? ORDER BY genre_id";
         List<Long> genreIds = jdbcTemplate.queryForList(genresSql, Long.class, film.getId());
 
-        Set<Genre> genres = genreIds.stream()
-                .map(Genre::fromId) // Используем метод fromId из enum
-                .collect(Collectors.toSet());
+        List<GenreDto> genres = genreIds.stream()
+                .map(genreId -> {
+                    try {
+                        Genre genre = Genre.fromId(genreId);
+                        return new GenreDto(genre.getId(), genre.getName());
+                    } catch (Exception e) {
+                        System.err.println("Error loading genre " + genreId + " for film " + film.getId());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         film.setGenres(genres);
+
+        // Загружаем MPA если она не была загружена
+        if (film.getMpa() == null) {
+            String mpaSql = "SELECT mpa_rating FROM films WHERE id = ?";
+            try {
+                String mpaCode = jdbcTemplate.queryForObject(mpaSql, String.class, film.getId());
+                if (mpaCode != null && !mpaCode.isEmpty()) {
+                    RatingMPA rating = RatingMPA.fromCode(mpaCode);
+                    film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+                }
+            } catch (Exception e) {
+                System.err.println("Error loading MPA for film " + film.getId() + ": " + e.getMessage());
+            }
+        }
 
         // Загружаем лайки
         String likesSql = "SELECT user_id FROM likes WHERE film_id = ?";
