@@ -1,10 +1,12 @@
 package ru.yandex.practicum.filmorate.service;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import ru.yandex.practicum.filmorate.dto.MpaDto;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.modelFilm.Film;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
@@ -12,7 +14,8 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -37,7 +40,11 @@ class FilmServiceTest {
         validFilm.setDescription("Valid Description");
         validFilm.setReleaseDate(LocalDate.of(2000, 1, 1));
         validFilm.setDuration(120);
+        MpaDto mpa = new MpaDto();
+        mpa.setId(1L); // Например, G рейтинг
+        validFilm.setMpa(mpa);
     }
+
 
     @Test
     void createWithValidFilmTest() {

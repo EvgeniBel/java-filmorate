@@ -11,7 +11,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import ru.yandex.practicum.filmorate.dto.GenreDto;
 import ru.yandex.practicum.filmorate.dto.MpaDto;
 import ru.yandex.practicum.filmorate.model.modelFilm.Film;
-import ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
 import ru.yandex.practicum.filmorate.storage.db.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.db.UserDbStorage;
@@ -36,19 +35,14 @@ class FilmorateApplicationTests {
     @BeforeEach
     void setUp() {
         // Очищаем таблицы перед каждым тестом
-        jdbcTemplate.execute("DELETE FROM friends");
         jdbcTemplate.execute("DELETE FROM likes");
+        jdbcTemplate.execute("DELETE FROM friends");
         jdbcTemplate.execute("DELETE FROM film_genres");
         jdbcTemplate.execute("DELETE FROM films");
         jdbcTemplate.execute("DELETE FROM users");
 
-        // Вставляем жанры, если их нет
-        jdbcTemplate.execute("""
-                MERGE INTO genres (id, name) KEY(id) VALUES (1, 'Комедия')
-                """);
-        jdbcTemplate.execute("""
-                MERGE INTO genres (id, name) KEY(id) VALUES (2, 'Драма')
-                """);
+        jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE films ALTER COLUMN id RESTART WITH 1");
     }
 
     @Test
@@ -82,12 +76,12 @@ class FilmorateApplicationTests {
         // Создаем фильм
         Film film = new Film();
         film.setName("Test Film");
-        film.setDescription("Test Description");
+        film.setDescription("Description");
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
         film.setDuration(120);
 
         // Используем MpaDto.fromRatingMPA
-        film.setMpa(MpaDto.fromRatingMPA(RatingMPA.G));
+        film.setMpa(createMpaDto());
 
         // Добавляем жанры
         List<GenreDto> genres = Arrays.asList(
@@ -131,12 +125,7 @@ class FilmorateApplicationTests {
         film.setDescription("Description");
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
         film.setDuration(120);
-
-        // Создаем MpaDto
-        MpaDto mpaDto = new MpaDto();
-        mpaDto.setId(1L); // ID для G
-        mpaDto.setName("G"); // Код MPA
-        film.setMpa(mpaDto);
+        film.setMpa(createMpaDto());
 
         Film createdFilm = filmStorage.create(film);
 
@@ -179,7 +168,6 @@ class FilmorateApplicationTests {
         // Добавляем лайк только Film 2
         filmStorage.addLike(filmId2, userId);
 
-        // Проверяем
         List<Film> popular = filmStorage.getPopularFilms(2);
         assertThat(popular).hasSize(2);
         assertThat(popular.get(0).getName()).isEqualTo("Film 2"); // С лайком
@@ -189,12 +177,10 @@ class FilmorateApplicationTests {
     private Film createFilm(String name) {
         Film film = new Film();
         film.setName(name);
-        film.setDescription("Desc");
+        film.setDescription("Description");
         film.setReleaseDate(LocalDate.now().minusYears(1));
         film.setDuration(100);
-
-        MpaDto mpa = new MpaDto(1L, "G", null);
-        film.setMpa(mpa);
+        film.setMpa(createMpaDto());
 
         return filmStorage.create(film);
     }
@@ -206,5 +192,13 @@ class FilmorateApplicationTests {
         user.setName("User");
         user.setBirthday(LocalDate.of(1990, 1, 1));
         return userStorage.create(user);
+    }
+
+    private MpaDto createMpaDto() {
+        MpaDto mpa = new MpaDto();
+        mpa.setId(1L); // G рейтинг
+        mpa.setName("G");
+        mpa.setDescription("Description");
+        return mpa;
     }
 }

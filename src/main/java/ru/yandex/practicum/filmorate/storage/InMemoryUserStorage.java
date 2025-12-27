@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate.storage;
 
-
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
@@ -88,12 +87,10 @@ public class InMemoryUserStorage implements UserStorage {
             // Меняем статус на CONFIRMED у обоих
             friendshipStatuses.get(userId).put(friendId, "CONFIRMED");
 
-            // У друга тоже меняем статус
             if (friendshipStatuses.containsKey(friendId)) {
                 friendshipStatuses.get(friendId).put(userId, "CONFIRMED");
             }
 
-            // Добавляем друга в список друзей (если его там нет)
             friends.get(userId).add(friendId);
         } else {
             throw new RuntimeException("Заявка в друзья не найдена или уже обработана");
