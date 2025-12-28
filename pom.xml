@@ -24,8 +24,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-
-        <!-- ДОБАВЬТЕ ЭТИ ЗАВИСИМОСТИ ДЛЯ РАБОТЫ С БАЗОЙ ДАННЫХ -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>

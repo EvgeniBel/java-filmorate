@@ -38,3 +38,6 @@ create TABLE IF NOT EXISTS friends (
     FOREIGN KEY (user_id) REFERENCES users(id) ON delete CASCADE,
     FOREIGN KEY (friend_id) REFERENCES users(id) ON delete CASCADE
 );
+
+ALTER SEQUENCE IF EXISTS users_id_seq RESTART WITH 1;
+ALTER SEQUENCE IF EXISTS films_id_seq RESTART WITH 1;
