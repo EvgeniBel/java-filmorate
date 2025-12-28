@@ -532,8 +532,7 @@
                   "pm.test(\"Test user[0] 'id' field\", function () {\r",
                   "    var jsonData = pm.response.json();\r",
                   "    pm.expect(jsonData[0]).to.have.property('id');\r",
-                  "    pm.expect(jsonData[0].id).to.be.a('number');\r",
-                  "    pm.expect(jsonData[0].id).to.be.greaterThan(0);\r",
+                  "    pm.expect(jsonData[0].id, '\"id\" must be 1').to.eql(1);\r",
                   "});\r",
                   ""
                 ],
