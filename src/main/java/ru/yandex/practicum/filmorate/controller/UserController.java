@@ -16,8 +16,8 @@ public class UserController {
     private static final String USER_BY_ID = "/{id}";
     private static final String USER_FRIENDS_LIST = "/{id}/friends";
     public static final String USER_FRIENDS = "/{id}/friends/{friendId}";
-    public static final String USER_COMMON_FRIENDS = "/{id}/friends/common/{otherId}";
-    public static final String CONFIRM_FRIEND = "/{id}/friends/{friendId}/confirm";
+    private static final String USER_COMMON_FRIENDS = "/{id}/friends/common/{otherId}";
+    private static final String CONFIRM_FRIEND = "/{id}/friends/{friendId}/confirm";
     public static final String FRIEND_REQUESTS = "/{id}/friends/requests";
 
     public UserController(UserService userService) {

@@ -16,11 +16,12 @@ create TABLE IF NOT EXISTS users (
     birthday DATE
 );
 
-create TABLE IF NOT EXISTS film_genres (
+CREATE TABLE IF NOT EXISTS film_genres (
     film_id BIGINT NOT NULL,
     genre_id BIGINT NOT NULL,
     PRIMARY KEY (film_id, genre_id),
-    FOREIGN KEY (film_id) REFERENCES films(id) ON delete CASCADE
+    FOREIGN KEY (film_id) REFERENCES films(id) ON DELETE CASCADE,
+    FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE CASCADE
 );
 
 create TABLE IF NOT EXISTS likes (
@@ -31,13 +32,27 @@ create TABLE IF NOT EXISTS likes (
     FOREIGN KEY (user_id) REFERENCES users(id) ON delete CASCADE
 );
 
-create TABLE IF NOT EXISTS friends (
+CREATE TABLE IF NOT EXISTS friends (
     user_id BIGINT NOT NULL,
     friend_id BIGINT NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING', -- или confirmed BOOLEAN DEFAULT FALSE
     PRIMARY KEY (user_id, friend_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON delete CASCADE,
-    FOREIGN KEY (friend_id) REFERENCES users(id) ON delete CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS mpa_ratings (
+    id BIGINT PRIMARY KEY,
+    code VARCHAR(10) NOT NULL,
+    description VARCHAR(255)
+);
+
+INSERT INTO mpa_ratings (id, code, description) VALUES
+(1, 'G', 'Нет возрастных ограничений'),
+(2, 'PG', 'Детям рекомендуется смотреть с родителями'),
+(3, 'PG-13', 'Детям до 13 лет просмотр не желателен'),
+(4, 'R', 'Лицам до 17 лет просмотр только в присутствии взрослого'),
+(5, 'NC-17', 'Лицам до 18 лет просмотр запрещён');
 
 ALTER SEQUENCE IF EXISTS users_id_seq RESTART WITH 1;
 ALTER SEQUENCE IF EXISTS films_id_seq RESTART WITH 1;

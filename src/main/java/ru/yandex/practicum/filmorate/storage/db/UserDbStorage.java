@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.modelUser.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
@@ -17,6 +18,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
+@Transactional
 @Repository("userDbStorage")
 public class UserDbStorage implements UserStorage {
 
