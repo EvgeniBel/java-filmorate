@@ -3,7 +3,6 @@ package ru.yandex.practicum.filmorate.model.modelFilm;
 import lombok.Getter;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
-
 @Getter
 public enum Genre {
     COMEDY(1L, "Комедия"),

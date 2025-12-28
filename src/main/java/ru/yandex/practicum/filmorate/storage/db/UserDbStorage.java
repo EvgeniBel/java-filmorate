@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.storage.db;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -94,8 +93,6 @@ public class UserDbStorage implements UserStorage {
         jdbcTemplate.update("DELETE FROM users WHERE id = ?", id);
     }
 
-    // ========== МЕТОДЫ ДЛЯ ДРУЗЕЙ ==========
-
     @Override
     public void addFriend(Long userId, Long friendId) {
         // Проверяем, что не добавляем самого себя
@@ -142,12 +139,12 @@ public class UserDbStorage implements UserStorage {
     public List<User> getFriends(Long userId) {
         // Получаем всех, кого пользователь добавил в друзья
         String sql = """
-            SELECT u.* 
-            FROM users u 
-            INNER JOIN friends f ON u.id = f.friend_id 
-            WHERE f.user_id = ? 
-            ORDER BY u.id
-            """;
+                SELECT u.*
+                FROM users u
+                INNER JOIN friends f ON u.id = f.friend_id
+                WHERE f.user_id = ?
+                ORDER BY u.id
+                """;
 
         List<User> friends = jdbcTemplate.query(sql, userRowMapper, userId);
         System.out.println("Найдено друзей для пользователя " + userId + ": " + friends.size());
@@ -158,18 +155,16 @@ public class UserDbStorage implements UserStorage {
     public List<User> getCommonFriends(Long userId, Long otherId) {
         // Общие друзья - те, кого оба пользователя добавили в друзья
         String sql = """
-            SELECT u.* FROM users u 
-            WHERE u.id IN (
-                SELECT friend_id FROM friends WHERE user_id = ?
-                INTERSECT
-                SELECT friend_id FROM friends WHERE user_id = ?
-            )
-            ORDER BY u.id
-            """;
+                SELECT u.* FROM users u
+                WHERE u.id IN (
+                    SELECT friend_id FROM friends WHERE user_id = ?
+                    INTERSECT
+                    SELECT friend_id FROM friends WHERE user_id = ?
+                )
+                ORDER BY u.id
+                """;
         return jdbcTemplate.query(sql, userRowMapper, userId, otherId);
     }
-
-    // ========== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ (не используются в односторонней системе) ==========
 
     @Override
     public void confirmFriend(Long userId, Long friendId) {

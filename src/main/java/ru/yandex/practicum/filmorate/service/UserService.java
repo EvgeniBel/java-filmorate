@@ -25,7 +25,7 @@ public class UserService {
     }
 
     public User findById(Long id) {
-        return findUserOrThrow(id);
+        return findUser(id);
     }
 
     public User create(User user) {
@@ -35,14 +35,14 @@ public class UserService {
     }
 
     public User update(User user) {
-        findUserOrThrow(user.getId());
+        findUser(user.getId());
         validateUser(user);
         checkNameExist(user);
         return userStorage.update(user);
     }
 
     public void delete(Long userId) {
-        findUserOrThrow(userId);
+        findUser(userId);
         userStorage.delete(userId);
     }
 
@@ -53,26 +53,26 @@ public class UserService {
         }
 
         // Проверяем существование пользователей
-        findUserOrThrow(userId);
-        findUserOrThrow(friendId);
+        findUser(userId);
+        findUser(friendId);
 
         userStorage.addFriend(userId, friendId);
     }
 
     public void removeFriend(Long userId, Long friendId) {
-        findUserOrThrow(userId);
-        findUserOrThrow(friendId);
+        findUser(userId);
+        findUser(friendId);
         userStorage.removeFriend(userId, friendId);
     }
 
     public List<User> getFriends(Long userId) {
-        findUserOrThrow(userId);
+        findUser(userId);
         return userStorage.getFriends(userId);
     }
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        findUserOrThrow(userId);
-        findUserOrThrow(otherId);
+        findUser(userId);
+        findUser(otherId);
         return userStorage.getCommonFriends(userId, otherId);
     }
 
@@ -94,7 +94,7 @@ public class UserService {
         }
     }
 
-    private User findUserOrThrow(Long userId) {
+    private User findUser(Long userId) {
         return userStorage.findById(userId)
                 .orElseThrow(() -> new NotFoundException(
                         String.format("Пользователь с id = %d не найден", userId)));
