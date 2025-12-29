@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.model.modelFilm;
+package ru.yandex.practicum.filmorate.model.film;
 
 import lombok.Getter;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;

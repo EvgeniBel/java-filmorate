@@ -3,7 +3,7 @@ package ru.yandex.practicum.filmorate.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import ru.yandex.practicum.filmorate.model.modelFilm.Genre;
+import ru.yandex.practicum.filmorate.model.film.Genre;
 
 import java.util.Objects;
 

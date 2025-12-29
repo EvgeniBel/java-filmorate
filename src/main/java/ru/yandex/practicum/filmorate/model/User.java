@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.model.modelUser;
+package ru.yandex.practicum.filmorate.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Email;
@@ -28,7 +28,6 @@ public class User {
     @PastOrPresent(message = "Дата рождения не может быть в будущем")
     private LocalDate birthday;
 
-    // Добавляем логику для имени
     public String getName() {
         if (name == null || name.isBlank()) {
             return login;
@@ -36,6 +35,6 @@ public class User {
         return name;
     }
 
-    @JsonIgnore // Скрываем из JSON, если не нужно в API
+    @JsonIgnore
     private Set<Long> friends = new HashSet<>();
 }

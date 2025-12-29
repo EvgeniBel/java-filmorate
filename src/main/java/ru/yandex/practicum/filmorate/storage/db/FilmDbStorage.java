@@ -8,9 +8,9 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dto.GenreDto;
 import ru.yandex.practicum.filmorate.dto.MpaDto;
-import ru.yandex.practicum.filmorate.model.modelFilm.Film;
-import ru.yandex.practicum.filmorate.model.modelFilm.Genre;
-import ru.yandex.practicum.filmorate.model.modelFilm.RatingMPA;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.film.Genre;
+import ru.yandex.practicum.filmorate.model.film.RatingMPA;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.sql.Date;
@@ -197,7 +197,7 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private void loadFilmData(Film film) {
-        // Загружаем жанры с сохранением порядка
+        // Загружаем жанры
         String genresSql = "SELECT genre_id FROM film_genres WHERE film_id = ? ORDER BY genre_id";
         List<Long> genreIds = jdbcTemplate.queryForList(genresSql, Long.class, film.getId());
 
