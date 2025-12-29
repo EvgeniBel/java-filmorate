@@ -43,13 +43,18 @@ public class FilmService {
     }
 
     public Film create(Film film) {
+        validateFilmForCreate(film);
         validateAndProcessFilm(film);
         return filmStorage.create(film);
     }
 
 
     public Film update(Film film) {
-        findFilm(film.getId());
+        if (film.getId() == null) {
+            throw new ValidationException("ID фильма должен быть указан для обновления");
+        }
+        findFilm(film.getId()); // Проверяем, что фильм существует
+        validateFilmForUpdate(film);
         validateAndProcessFilm(film);
         return filmStorage.update(film);
     }
@@ -109,12 +114,6 @@ public class FilmService {
                 .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден", userId)));
     }
 
-    private void validateAndProcessFilm(Film film) {
-        validatedFilm(film);
-        validateAndProcessMpa(film);
-        validateAndProcessGenres(film);
-    }
-
     private void validateAndProcessMpa(Film film) {
         if (film.getMpa() == null || film.getMpa().getId() == null) {
             throw new ValidationException("MPA рейтинг должен быть указан");
@@ -146,5 +145,45 @@ public class FilmService {
             }
             film.setGenres(validatedGenres);
         }
+    }
+
+    private void validateFilmForCreate(Film film) {
+        validateBasicFilmFields(film);
+        if (film.getId() != null) {
+            throw new ValidationException("ID не должен быть указан при создании");
+        }
+    }
+
+    private void validateFilmForUpdate(Film film) {
+        validateBasicFilmFields(film);
+    }
+
+    private void validateBasicFilmFields(Film film) {
+        if (film.getName() == null || film.getName().isBlank()) {
+            throw new ValidationException("Название не может быть пустым");
+        }
+        if (film.getDescription() != null && film.getDescription().length() > 200) {
+            throw new ValidationException("Максимальная длина описания — 200 символов");
+        }
+        if (film.getReleaseDate() == null) {
+            throw new ValidationException("Дата релиза должна быть указана");
+        }
+        if (film.getReleaseDate().isBefore(minReleaseDate)) {
+            throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
+        }
+        if (film.getReleaseDate().isAfter(LocalDate.now())) {
+            throw new ValidationException("Дата релиза не может быть в будущем");
+        }
+        if (film.getDuration() <= 0) {
+            throw new ValidationException("Продолжительность фильма должна быть положительным числом");
+        }
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
+    }
+
+    private void validateAndProcessFilm(Film film) {
+        validateAndProcessMpa(film);
+        validateAndProcessGenres(film);
     }
 }

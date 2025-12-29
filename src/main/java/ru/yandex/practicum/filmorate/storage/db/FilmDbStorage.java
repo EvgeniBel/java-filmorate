@@ -197,7 +197,7 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private void loadFilmData(Film film) {
-        // Загружаем жанры с сохранением порядка
+        // Загружаем жанры
         String genresSql = "SELECT genre_id FROM film_genres WHERE film_id = ? ORDER BY genre_id";
         List<Long> genreIds = jdbcTemplate.queryForList(genresSql, Long.class, film.getId());
 
