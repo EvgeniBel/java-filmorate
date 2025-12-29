@@ -30,7 +30,7 @@ public class GenreController {
             Genre genre = Genre.fromId(id);
             return GenreDto.fromGenre(genre);
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Жанр не найден", e);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Жанр с id=" + id + " не найден", e);
         }
     }
 }

@@ -32,7 +32,7 @@ public class MpaController {
             RatingMPA rating = RatingMPA.fromId(id);
             return MpaDto.fromRatingMPA(rating);
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Рейтинг MPA не найден", e);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Рейтинг MPA c id=" + id + " не найден", e);
         }
     }
 }
