@@ -1,10 +1,11 @@
 package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.modelUser.User;
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
@@ -15,7 +16,7 @@ public class UserService {
     private final UserStorage userStorage;
 
     @Autowired
-    public UserService(UserStorage userStorage) {
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage) {
         this.userStorage = userStorage;
     }
 
@@ -24,7 +25,7 @@ public class UserService {
     }
 
     public User findById(Long id) {
-        return findUserOrThrow(id);
+        return findUser(id);
     }
 
     public User create(User user) {
@@ -34,42 +35,46 @@ public class UserService {
     }
 
     public User update(User user) {
-        findUserOrThrow(user.getId());
+        findUser(user.getId());
         validateUser(user);
         checkNameExist(user);
         return userStorage.update(user);
     }
 
     public void delete(Long userId) {
-        findUserOrThrow(userId);
+        findUser(userId);
         userStorage.delete(userId);
     }
 
     public void addFriend(Long userId, Long friendId) {
-        findUserOrThrow(userId);
-        findUserOrThrow(friendId);
+        // Простая проверка
+        if (userId.equals(friendId)) {
+            throw new ValidationException("Пользователь не может добавить самого себя в друзья");
+        }
+        findUser(userId);
+        findUser(friendId);
+
         userStorage.addFriend(userId, friendId);
     }
 
     public void removeFriend(Long userId, Long friendId) {
-        findUserOrThrow(userId);
-        findUserOrThrow(friendId);
+        findUser(userId);
+        findUser(friendId);
         userStorage.removeFriend(userId, friendId);
     }
 
     public List<User> getFriends(Long userId) {
-        findUserOrThrow(userId);
+        findUser(userId);
         return userStorage.getFriends(userId);
     }
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        findUserOrThrow(userId);
-        findUserOrThrow(otherId);
+        findUser(userId);
+        findUser(otherId);
         return userStorage.getCommonFriends(userId, otherId);
     }
 
     public void validateUser(User user) {
-
         if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             throw new ValidationException("Электронная почта не может быть пустой и должна содержать символ @");
         }
@@ -87,8 +92,17 @@ public class UserService {
         }
     }
 
-    private User findUserOrThrow(Long userId) {
+    private User findUser(Long userId) {
         return userStorage.findById(userId)
-                .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден", userId)));
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Пользователь с id = %d не найден", userId)));
+    }
+
+    public void confirmFriend(Long userId, Long friendId) {
+        System.out.println("confirmFriend не используется");
+    }
+
+    public List<User> getFriendRequests(Long userId) {
+        return List.of();
     }
 }
