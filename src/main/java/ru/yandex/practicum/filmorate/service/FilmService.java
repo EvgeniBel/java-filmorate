@@ -1,16 +1,24 @@
 package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dto.GenreDto;
+import ru.yandex.practicum.filmorate.dto.MpaDto;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.modelFilm.Film;
-import ru.yandex.practicum.filmorate.model.modelUser.User;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.film.Genre;
+import ru.yandex.practicum.filmorate.model.film.RatingMPA;
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class FilmService {
@@ -20,7 +28,8 @@ public class FilmService {
     private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
+                       @Qualifier("userDbStorage") UserStorage userStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
     }
@@ -30,34 +39,40 @@ public class FilmService {
     }
 
     public Film findById(Long filmId) {
-        return findFilmOrThrow(filmId);
+        return findFilm(filmId);
     }
 
     public Film create(Film film) {
-        validatedFilm(film);
+        validateFilmForCreate(film);
+        validateAndProcessFilm(film);
         return filmStorage.create(film);
     }
 
+
     public Film update(Film film) {
-        findFilmOrThrow(film.getId());
-        validatedFilm(film);
+        if (film.getId() == null) {
+            throw new ValidationException("ID фильма должен быть указан для обновления");
+        }
+        findFilm(film.getId()); // Проверяем, что фильм существует
+        validateFilmForUpdate(film);
+        validateAndProcessFilm(film);
         return filmStorage.update(film);
     }
 
     public void delete(Long filmId) {
-        findFilmOrThrow(filmId);
+        findFilm(filmId);
         filmStorage.delete(filmId);
     }
 
     public void addLike(Long filmId, Long userId) {
-        findFilmOrThrow(filmId);
-        findUserOrThrow(userId);
+        findFilm(filmId);
+        findUser(userId);
         filmStorage.addLike(filmId, userId);
     }
 
     public void removeLike(Long filmId, Long userId) {
-        findFilmOrThrow(filmId);
-        findUserOrThrow(userId);
+        findFilm(filmId);
+        findUser(userId);
         filmStorage.removeLike(filmId, userId);
     }
 
@@ -72,7 +87,6 @@ public class FilmService {
         if (film.getDescription() != null && film.getDescription().length() > 200) {
             throw new ValidationException("Максимальная длина описания — 200 символов");
         }
-
         if (film.getReleaseDate() == null) {
             throw new ValidationException("Дата релиза должна быть указана");
         }
@@ -85,15 +99,91 @@ public class FilmService {
         if (film.getDuration() <= 0) {
             throw new ValidationException("Продолжительность фильма должна быть положительным числом");
         }
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
     }
 
-    private Film findFilmOrThrow(Long filmId) {
+    private Film findFilm(Long filmId) {
         return filmStorage.findById(filmId)
                 .orElseThrow(() -> new NotFoundException(String.format("Фильм с id = %d не найден", filmId)));
     }
 
-    private User findUserOrThrow(Long userId) {
+    private User findUser(Long userId) {
         return userStorage.findById(userId)
                 .orElseThrow(() -> new NotFoundException(String.format("Пользователь с id = %d не найден", userId)));
+    }
+
+    private void validateAndProcessMpa(Film film) {
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
+
+        try {
+            RatingMPA rating = RatingMPA.fromId(film.getMpa().getId());
+            film.setMpa(new MpaDto(rating.getId(), rating.getCode(), rating.getDescription()));
+        } catch (NotFoundException e) {
+            throw new NotFoundException("Неверный ID рейтинга MPA: " + film.getMpa().getId());
+        }
+    }
+
+    private void validateAndProcessGenres(Film film) {
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            List<GenreDto> validatedGenres = new ArrayList<>();
+            Set<Long> seenIds = new HashSet<>();
+
+            for (GenreDto genreDto : film.getGenres()) {
+                try {
+                    Genre genre = Genre.fromId(genreDto.getId());
+                    if (!seenIds.contains(genre.getId())) {
+                        seenIds.add(genre.getId());
+                        validatedGenres.add(new GenreDto(genre.getId(), genre.getName()));
+                    }
+                } catch (NotFoundException e) {
+                    throw new NotFoundException("Неверный ID жанра: " + genreDto.getId());
+                }
+            }
+            film.setGenres(validatedGenres);
+        }
+    }
+
+    private void validateFilmForCreate(Film film) {
+        validateBasicFilmFields(film);
+        if (film.getId() != null) {
+            throw new ValidationException("ID не должен быть указан при создании");
+        }
+    }
+
+    private void validateFilmForUpdate(Film film) {
+        validateBasicFilmFields(film);
+    }
+
+    private void validateBasicFilmFields(Film film) {
+        if (film.getName() == null || film.getName().isBlank()) {
+            throw new ValidationException("Название не может быть пустым");
+        }
+        if (film.getDescription() != null && film.getDescription().length() > 200) {
+            throw new ValidationException("Максимальная длина описания — 200 символов");
+        }
+        if (film.getReleaseDate() == null) {
+            throw new ValidationException("Дата релиза должна быть указана");
+        }
+        if (film.getReleaseDate().isBefore(minReleaseDate)) {
+            throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
+        }
+        if (film.getReleaseDate().isAfter(LocalDate.now())) {
+            throw new ValidationException("Дата релиза не может быть в будущем");
+        }
+        if (film.getDuration() <= 0) {
+            throw new ValidationException("Продолжительность фильма должна быть положительным числом");
+        }
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
+    }
+
+    private void validateAndProcessFilm(Film film) {
+        validateAndProcessMpa(film);
+        validateAndProcessGenres(film);
     }
 }
